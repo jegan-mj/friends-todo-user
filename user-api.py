@@ -12,16 +12,27 @@ mydb = mongo_cli["friends_ToDo"]
 users_col = mydb["users"]
 login_history_col = mydb["login_history"]
 
+print("Connection status",type(mongo_cli))
+
 secret_key = "secret key of friend's todo list"
 
 redis_cli = redis.Redis(host='127.0.0.1',port=6379,password=None)
 
-exception_response = {}
-exception_response["status"] = {}
-exception_response["status"]["state"] = "fasle"
-exception_response["status"]["code"] = 404
-exception_response["status"]["type"] = "error"
-exception_response["status"]["message"] = "Temporarily not available"
+exception_response = {
+    "status": {
+        "code": 404,
+        "message": "Temporarily not available",
+        "state": "fasle",
+        "type": "error"
+    }
+}
+
+# exception_response = {}
+# exception_response["status"] = {}
+# exception_response["status"]["state"] = "fasle"
+# exception_response["status"]["code"] = 404
+# exception_response["status"]["type"] = "error"
+# exception_response["status"]["message"] = "Temporarily not available"
 
 @app.route("/v1/users/create/", methods=["POST"])
 def registration():
@@ -80,6 +91,7 @@ def login():
         user_details = request.get_json()
 
         if(user_details["email"]and user_details["password"]):
+            
             login_details = users_col.find_one({"email": user_details["email"]},{"_id":0,"password":1,"userId":1,"username":1},sort=[('_id', pymongo.DESCENDING)])
                         
             if user_details["password"] == login_details["password"]:
@@ -127,7 +139,7 @@ def login():
         print("Error at login()",str(err))
         return exception_response
 
-@app.route("v1/users/update", methods=["PUT"])
+@app.route("/v1/users/update", methods=["PUT"])
 def userUpdate():
     try:
         user_details = request.get_json()
@@ -170,8 +182,6 @@ def login_user(userId):
     
     except Exception as err:
         print("Error at login_user",str(err))
-        
-
         
 if __name__ == '__main__':
     app.run()
