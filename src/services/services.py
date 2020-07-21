@@ -40,3 +40,10 @@ def update(collection_name,filter,update_values):
 def set_at_redis(token):
     redis_cli.setex(token,14400,"session_id")
     
+def get_at_redis(token):
+    data = redis_cli.get(token)
+    print("Data found", data)
+    if data is None:
+        return False
+    else:
+        return True

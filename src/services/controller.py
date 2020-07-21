@@ -1,6 +1,6 @@
 from flask import  request
 import datetime
-import services
+from src.services import services
 from binascii import hexlify
 import os
 
@@ -69,7 +69,7 @@ def registration_fun():
                 response["data"]["email"] = user_details["email"]
                 response["data"]["username"] = user_details["username"]
                 response["data"]["userId"] = userId
-                response["data"]["session_token"] = sessionId
+                response["data"]["sessionId"] = sessionId
                 
                 print("Response", response)
                 return response
@@ -130,7 +130,7 @@ def login_fun():
                 }
                 response["data"]["username"] = login_details["username"]
                 response["data"]["userId"] = login_details["userId"]
-                response["data"]["session_token"] = sessionId
+                response["data"]["sessionId"] = sessionId
                 
                 print("Response", response)
                 return response
@@ -165,6 +165,80 @@ def login_fun():
         print("Error at login()",str(err))
         return exception_response
     
+def update_user_fun():
+    try:
+        user_details = request.get_json()
+        if "sessionId" in user_details and user_details["sessionId"]:
+            session_status = check_session(user_details["sessionId"])
+            
+            if session_status:
+                if("userId" in user_details and user_details["userId"] and "password" in user_details and user_details["password"] and "notification" in user_details and user_details["notifications"]):
+                    
+                    time_now = datetime.datetime.now
+                    services.update("users",{"userId": user_details["userId"]},
+                    {"password": user_details["password"],"notifications": user_details["notifications"],
+                    "updatedTime": time_now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")})
+                    
+                    response = {
+                        "data": {
+                        },
+                        "status": {
+                            "code": 200,
+                            "message": "User updated successfully",
+                            "state": "true",
+                            "type": "success"
+                        }
+                    }
+                    response["data"]["email"] = user_details["email"]
+                    response["data"]["username"] = user_details["username"]
+                    response["data"]["userId"] = user_details["userId"] 
+                    
+                    print("Response", response)
+                    return response  
+                
+                else:
+                    response = {
+                    "status": {
+                        "code": 400,
+                        "message": "Please give all the details",
+                        "state": "fasle",
+                        "type": "bad request"
+                    }
+                }
+                
+                print("Response", response)
+                return response
+            else:
+                response = {
+                    "status": {
+                        "code": 400,
+                        "state": "false",
+                        "message": "Please login again",
+                        "type": "bad request"
+                    }
+                }
+                
+                print("Response", response)
+                return response
+                    
+        else:
+            
+            response = {
+                "status": {
+                    "code": 400,
+                    "state": "false",
+                    "message": "Please login again",
+                    "type": "bad request"
+                }
+            }
+            
+            print("Response", response)
+            return response
+    except Exception as err:
+        print("Error at update_user",str(err))
+        return exception_response
+        
+
 def create_session(userId):
     try:
         token = hexlify(os.urandom(32)).decode('utf-8')
@@ -188,3 +262,12 @@ def create_session(userId):
 
     except Exception as err:
         print("Error at create_session",str(err))
+        
+        
+def check_session(token):
+    try:
+        session_status = services.get_at_redis(token)
+        return session_status
+    except Exception as err:
+        print("Error at check_session",str(err))
+        

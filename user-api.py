@@ -159,8 +159,7 @@ def userUpdate():
     
 
 def login_user(userId):
-    
-    
+
     try:
         token = hexlify(os.urandom(32)).decode('utf-8')
         #redis_cli.mset({"sessionId"})
