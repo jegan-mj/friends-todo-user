@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask,request
 from src.services.controller import registration_fun, login_fun, update_user_fun
 from config import vars
 
