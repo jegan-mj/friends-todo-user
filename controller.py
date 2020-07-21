@@ -1,4 +1,3 @@
-# redis_cli = redis.Redis(host='127.0.0.1',port=6379,password=None)
 from flask import  request
 import datetime
 import services
@@ -166,16 +165,16 @@ def login_fun():
 def create_session(userId):
     try:
         token = hexlify(os.urandom(32)).decode('utf-8')
-        #redis_cli.mset({"sessionId"})
+        services.set_at_redis(token)
 
         print(token)
         time_now = datetime.datetime.now()
-        
+        session_duration = time_now + datetime.timedelta(0,14400)
         login_record = {}
         login_record["userId"] = userId
         login_record["loginTime"] = time_now
         login_record["sessionId"] = token
-        login_record["sessionDuration"] = 14400
+        login_record["sessionDuration"] = session_duration
         login_record["inSession"] = True
         
         services.insert("login_history",login_record)

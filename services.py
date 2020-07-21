@@ -1,4 +1,4 @@
-from  config.mongodb import mydb
+from  config.connections import mydb,redis_cli
         
 def insert(collection_name,record):
     
@@ -25,3 +25,7 @@ def find(collection_name,query,show_fields):
         
     except Exception as err:
         print("Error at find",str(err))
+        
+def set_at_redis(token):
+    redis_cli.setex(token,14400,"session_id")
+    
