@@ -46,12 +46,14 @@ def registration_fun():
                 time_now = datetime.datetime.now()
                 userId = id(user_details["email"])
                 
-                user_details["createdTime"] = time_now
+                user_details["createdTime"] = time_now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
                 user_details["userId"] = userId
                 user_details["updatedTime"] = "null"
                 user_details["lastLoginTime"] = "null"
 
                 services.insert("user",user_details)
+                
+                sessionId = create_session(userId)
                 
                 response = {
                     "data": {
@@ -67,6 +69,7 @@ def registration_fun():
                 response["data"]["email"] = user_details["email"]
                 response["data"]["username"] = user_details["username"]
                 response["data"]["userId"] = userId
+                response["data"]["session_token"] = sessionId
                 
                 print("Response", response)
                 return response
@@ -167,19 +170,20 @@ def create_session(userId):
         token = hexlify(os.urandom(32)).decode('utf-8')
         services.set_at_redis(token)
 
-        print(token)
         time_now = datetime.datetime.now()
         session_duration = time_now + datetime.timedelta(0,14400)
+        
         login_record = {}
         login_record["userId"] = userId
         login_record["loginTime"] = time_now
+        login_record["logoutTime"] = "null"
         login_record["sessionId"] = token
-        login_record["sessionDuration"] = session_duration
+        login_record["sessionDuration"] = session_duration.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         login_record["inSession"] = True
         
         services.insert("login_history",login_record)
-        print("Data inserted", login_record)
-
+        services.update("users",{"userId": userId},{"lastLoginTime": time_now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")})
+        
         return token
 
     except Exception as err:
