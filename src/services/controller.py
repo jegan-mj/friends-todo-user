@@ -4,27 +4,40 @@ from src.services import services
 from binascii import hexlify
 import os
 from marshmallow import ValidationError
-from src.routes import validation
-
-exception_response = {
-    "status": {
-        "code": 404,
-        "message": "Temporarily not available",
-        "state": "fasle",
-        "type": "error"
-    }
-}
+from src.routes.validation import *
+from src.routes.responses import *
 
 def registration_fun():
-    try:        
-        user_details = validation.RegistrationSchema().load(request.form)
-        
-        data = services.find("user",{"email": user_details["email"]},{"_id":0,"email":1})
-        
-        print(data)
-        
-        if "email" in data:
+    try:    
+        print("request.get_data()", request.get_data())
+        print(type(request.get_data()))
             
+        user_details = RegistrationSchema().load(request.form)
+        data = services.find("users",{"email": user_details["email"]},{"_id":0,"email":1})
+        
+        
+        print("request.form", request.form)
+        print(type(request.form))
+        print("request", request)
+        print(type(request))
+        print("request.args", request.args)
+        print(type(request.args))
+        print("request.method", request.method)
+        print(type(request.method))
+        print("request.files", request.files)
+        print(type(request.files))
+        print("request.cookies", request.cookies)
+        print(type(request.cookies))
+        print("request.data", request.data)
+        print(type(request.data))
+        print("request.json", request.json)
+        print(type(request.json))
+        print("request.values", request.values)
+        print(type(request.values))
+        print("request.stream()", request.get_data())
+        print(type(request.get_data()))
+                
+        if "email" in data:
             response = {
                 "status": {
                     "code": 402,
@@ -34,37 +47,34 @@ def registration_fun():
                 }
             }
             return response
-    
             
-        elif("username" in user_details and user_details["username"] and
-                "password" in user_details and user_details["password"]):
+        elif user_details["username"] and user_details["password"]:
                             
             if not(user_details["notification"]):
                 user_details["notification"] = "enabled"    
             
             time_now = datetime.datetime.now()
-            userId = id(user_details["email"])
+            userId = str(id(user_details["email"]))
             
             user_details["createdTime"] = time_now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
             user_details["userId"] = userId
             user_details["updatedTime"] = "null"
             user_details["lastLoginTime"] = "null"
 
-            services.insert("user",user_details)
-            
+            services.insert("users",user_details)
             sessionId = create_session(userId)
             
             response = {
-                "data": {
+                "data":{
                 },
                 "status": {
                     "code": 200,
-                    "message": "User created successfully",
                     "state": "true",
                     "type": "success"
                 }
             }
-            
+        
+            response["status"]["message"] = "User created successfully"
             response["data"]["email"] = user_details["email"]
             response["data"]["username"] = user_details["username"]
             response["data"]["userId"] = userId
@@ -74,35 +84,23 @@ def registration_fun():
             return response
         
         else:
-            response = {
-                "status": {
-                    "code": 400,
-                    "message": "Please enter username and password",
-                    "state": "fasle",
-                    "type": "error"
-                }
-            }
-
-            print("Response", response)
-            return response
-        
+            print("Response", bad_request_response)
+            return bad_request_response
         
     except ValidationError as err:
         print(err.messages)
         print(err.valid_data)
+        print(e)
         return exception_response
 
 def login_fun():
     try:
-        #user_details = request.get_json()
-        user_details = validation.LoginSchema().load(request.form)        
+        user_details = LoginSchema().load(request.form)        
 
-        if("password" in user_details and user_details["password"]):
-            
-            login_details = services.find("user",{"email": user_details["email"]},{"_id":0,"password":1,"userId":1,"username":1})
+        if user_details["password"]:
+            login_details = services.find("users",{"email": user_details["email"]},{"_id":0,"password":1,"userId":1,"username":1})
                         
             if user_details["password"] == login_details["password"]:
-                
                 print("Password matched")
                 sessionId = create_session(login_details["userId"])
                 
@@ -111,20 +109,20 @@ def login_fun():
                     },
                     "status": {
                         "code": 200,
-                        "message": "User login successful",
                         "state": "true",
                         "type": "success"
                     }
-                }
+                } 
+                response["status"]["message"] = "User login successful"
                 response["data"]["username"] = login_details["username"]
+                response["data"]["email"] = user_details["email"]                
                 response["data"]["userId"] = login_details["userId"]
                 response["data"]["sessionId"] = sessionId
-                
+
                 print("Response", response)
                 return response
             
             else:
-                
                 response = {
                     "status": {
                         "code": 401,
@@ -137,17 +135,8 @@ def login_fun():
                 return response
             
         else:
-            response = {
-                "status": {
-                    "code": 400,
-                    "message": "Please enter email and password",
-                    "state": "fasle",
-                    "type": "bad request"
-                }
-            }
-            
-            print("Response", response)
-            return response
+            print("Response", bad_request_response)
+            return bad_request_response
             
     except ValidationError as err:
         print(err.messages)
@@ -156,79 +145,123 @@ def login_fun():
     
 def update_user_fun():
     try:
-        #user_details = request.get_json()
-        user_details = validation.UpdateUserSchema().load(request.form)        
+        user_details = UpdateUserSchema().load(request.form)        
         
-        if "sessionId" in user_details and user_details["sessionId"]:
+        if user_details["sessionId"] and user_details["userId"]:
             session_status = check_session(user_details["sessionId"])
             
             if session_status:
-                if("userId" in user_details and user_details["userId"] and "password" in user_details and user_details["password"] and "notification" in user_details and user_details["notification"]):
-                    
-                    time_now = datetime.datetime.now()
-                    services.update("users",{"userId": user_details["userId"]},{"password": user_details["password"],"notification": user_details["notification"],"updatedTime": time_now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")})
-                    
-                    response = {
-                        "data": {
-                        },
-                        "status": {
-                            "code": 200,
-                            "message": "User updated successfully",
-                            "state": "true",
-                            "type": "success"
-                        }
-                    }
-                    response["data"]["email"] = user_details["email"]
-                    response["data"]["username"] = user_details["username"]
-                    response["data"]["userId"] = user_details["userId"] 
-                    
-                    print("Response", response)
-                    return response  
+                time_now = datetime.datetime.now()
                 
-                else:
-                    response = {
+                user_details["updatedTime"] = time_now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                services.update("users",{"userId": user_details["userId"]},user_details)
+                response = {
+                    "data":{
+                    },
                     "status": {
-                        "code": 400,
-                        "message": "Please give all the details",
-                        "state": "fasle",
-                        "type": "bad request"
+                        "code": 200,
+                        "state": "true",
+                        "type": "success"
                     }
                 }
+                response["status"]["message"] = "User updated successfully"
+                response["data"]["userId"] = user_details["userId"] 
                 
                 print("Response", response)
-                return response
+                return response  
+            
+            else:
+                print("Response", failed_session_response)
+                return failed_session_response
+                    
+        else:
+            print("Response", bad_request_response)
+            return bad_request_response
+        
+    except ValidationError as err:
+        print(err.messages)
+        print(err.valid_data)
+        return exception_response
+
+def logout_user_fun():
+    try:
+        user_details = LogoutSchema().load(request.form)        
+
+        if user_details["sessionId"] and user_details["userId"]:
+
+            session_status = check_session(user_details["sessionId"])
+            if session_status: 
+                time_now = datetime.datetime.now()
+                services.update("login_history",{"sessionId": user_details["sessionId"]},{"logoutTime": time_now.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),"sessionId": "null","sessionDuration": "null","inSession": False})
+                services.del_at_redis(user_details["sessionId"])
+                
+                response = {
+                    "status": {
+                        "code": 200,
+                        "state": "true",
+                        "type": "success"
+                    }
+                }
+                response["status"]["message"] = "User logout successful"
+                
+                print("Response", response)
+                return response 
+            
+            else:
+                print("Response", failed_session_response)
+                return failed_session_response
+                    
+        else:
+            print("Response", bad_request_response)
+            return bad_request_response
+            
+    except ValidationError as err:
+        print(err.messages)
+        print(err.valid_data)
+        return exception_response  
+    
+def forgetpassword_fun():
+    try:
+        user_details = ForgetPasswordSchema().load(request.form)
+        if(user_details["password"]):
+               
+            data = services.find("users",{"email": user_details["email"]},{"_id":0,"email":1})
+
+            if "email" in data:
+                time_now = datetime.datetime.now()
+                services.update("users",{"email": user_details["email"]},{"password": user_details["password"],"updatedTime": time_now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")})
+                response = {
+                    "status": {
+                        "code": 200,
+                        "state": "true",
+                        "type": "success"
+                    }
+                }
+                response["status"]["message"] = "Password changed successfully"
+                print("Response", response)
+                return response  
+            
             else:
                 response = {
                     "status": {
-                        "code": 400,
+                        "code": 402,
                         "state": "false",
-                        "message": "Please login again",
-                        "type": "bad request"
+                        "type": "error",
+                        "message": "Email not found"
                     }
                 }
-                
                 print("Response", response)
-                return response
-                    
+                return response  
+            
         else:
-            
-            response = {
-                "status": {
-                    "code": 400,
-                    "state": "false",
-                    "message": "Please login again",
-                    "type": "bad request"
-                }
-            }
-            
-            print("Response", response)
-            return response
+            print("Response", bad_request_response)
+            return bad_request_response
+        
     except ValidationError as err:
         print(err.messages)
         print(err.valid_data)
         return exception_response
         
-
 def create_session(userId):
     try:
         token = hexlify(os.urandom(32)).decode('utf-8')
@@ -252,12 +285,10 @@ def create_session(userId):
 
     except Exception as err:
         print("Error at create_session",str(err))
-        
-        
+            
 def check_session(token):
     try:
         session_status = services.get_at_redis(token)
         return session_status
     except Exception as err:
         print("Error at check_session",str(err))
-        

@@ -6,10 +6,9 @@ def insert(collection_name,record):
         collection = mydb[collection_name]
         collection.insert_one(record)
         print("Data inserted", record)
-        return True
     
     except Exception as err:
-        print("Error at insert",str(err))
+        print("Error at DB insert",str(err))
         
 def find(collection_name,filter,show_fields):
         
@@ -24,7 +23,7 @@ def find(collection_name,filter,show_fields):
             return data
         
     except Exception as err:
-        print("Error at find",str(err))
+        print("Error at DB find",str(err))
         
 def update(collection_name,filter,update_values):
     try:
@@ -34,16 +33,33 @@ def update(collection_name,filter,update_values):
         return True
     
     except Exception as err:
-        print("Error at update",str(err))
+        print("Error at DB update",str(err))
 
         
 def set_at_redis(token):
-    redis_cli.setex(token,14400,"session_id")
+    try:
+        redis_cli.setex(token,14400,"session_id")
+        print("Token Set", token)
+        
+    except Exception as err:
+        print("Error at Token set",str(err))
+
     
 def get_at_redis(token):
-    data = redis_cli.get(token)
-    print("Data found", data)
-    if data is None:
-        return False
-    else:
-        return True
+    try:
+        data = redis_cli.get(token)
+        print("Token found", data)
+        if data is None:
+            return False
+        else:
+            return True
+    except Exception as err:
+        print("Error at Token get",str(err))
+
+def del_at_redis(token):
+    try:
+        redis_cli.delete(token)
+        print("Token deleted", token)
+    except Exception as err:
+        print("Error at Token delete",str(err))
+
