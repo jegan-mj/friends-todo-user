@@ -6,36 +6,21 @@ import os
 from marshmallow import ValidationError
 from src.routes.validation import *
 from src.routes.responses import *
+from config import vars
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s:%(levelname)s:%(message)s"
+    )
 
 def registration_fun():
-    try:    
+    try:
         print("request.get_data()", request.get_data())
         print(type(request.get_data()))
             
         user_details = RegistrationSchema().load(request.form)
         data = services.find("users",{"email": user_details["email"]},{"_id":0,"email":1})
-        
-        
-        print("request.form", request.form)
-        print(type(request.form))
-        print("request", request)
-        print(type(request))
-        print("request.args", request.args)
-        print(type(request.args))
-        print("request.method", request.method)
-        print(type(request.method))
-        print("request.files", request.files)
-        print(type(request.files))
-        print("request.cookies", request.cookies)
-        print(type(request.cookies))
-        print("request.data", request.data)
-        print(type(request.data))
-        print("request.json", request.json)
-        print(type(request.json))
-        print("request.values", request.values)
-        print(type(request.values))
-        print("request.stream()", request.get_data())
-        print(type(request.get_data()))
                 
         if "email" in data:
             response = {
@@ -80,19 +65,22 @@ def registration_fun():
             response["data"]["userId"] = userId
             response["data"]["sessionId"] = sessionId
             
-            print("Response", response)
+            logging.info("Success at module: {} (Registartion)".format(vars.applicationName))
             return response
         
         else:
-            print("Response", bad_request_response)
             return bad_request_response
         
     except ValidationError as err:
-        print(err.messages)
-        print(err.valid_data)
-        print(e)
-        return exception_response
-
+        
+        logging.error("Error in req fields of module: {} (registration_fun) is: {}".format(vars.applicationName,err.messages))
+        logging.error("Valid Data in req fields of module: {} (registration_fun) is: {}".format(vars.applicationName,err.valid_data))
+        return bad_request_response
+    
+    except Exception as err:
+        logging.error("Err description of module: {} (registration_fun) is: {}".format(vars.applicationName,err))
+        return exception_response        
+        
 def login_fun():
     try:
         user_details = LoginSchema().load(request.form)        
@@ -101,9 +89,10 @@ def login_fun():
             login_details = services.find("users",{"email": user_details["email"]},{"_id":0,"password":1,"userId":1,"username":1})
                         
             if user_details["password"] == login_details["password"]:
-                print("Password matched")
-                sessionId = create_session(login_details["userId"])
                 
+                logging.info("Password matched at module: {} (Login)".format(vars.applicationName))
+                
+                sessionId = create_session(login_details["userId"])
                 response = {
                     "data": {
                     },
@@ -118,8 +107,8 @@ def login_fun():
                 response["data"]["email"] = user_details["email"]                
                 response["data"]["userId"] = login_details["userId"]
                 response["data"]["sessionId"] = sessionId
-
-                print("Response", response)
+                
+                logging.info("Success at module: {} (Login)".format(vars.applicationName))
                 return response
             
             else:
@@ -131,16 +120,19 @@ def login_fun():
                         "type": "unauthorized"
                     }
                 }
-                print("Response", response)
                 return response
             
         else:
-            print("Response", bad_request_response)
             return bad_request_response
             
     except ValidationError as err:
-        print(err.messages)
-        print(err.valid_data)
+        
+        logging.error("Error in req fields of module: {} (login_fun) is: {}".format(vars.applicationName,err.messages))
+        logging.error("Valid Data in req fields of module: {} (login_fun) is: {}".format(vars.applicationName,err.valid_data))
+        return bad_request_response
+    
+    except Exception as err:
+        logging.error("Err description of module: {} (login_fun) is: {}".format(vars.applicationName,err))
         return exception_response
     
 def update_user_fun():
@@ -151,6 +143,8 @@ def update_user_fun():
             session_status = check_session(user_details["sessionId"])
             
             if session_status:
+                
+                logging.info("In session at module: {} (Update_User)".format(vars.applicationName))
                 time_now = datetime.datetime.now()
                 
                 user_details["updatedTime"] = time_now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
@@ -167,20 +161,23 @@ def update_user_fun():
                 response["status"]["message"] = "User updated successfully"
                 response["data"]["userId"] = user_details["userId"] 
                 
-                print("Response", response)
+                logging.info("Success at module: {} (Update_User)".format(vars.applicationName))
                 return response  
             
             else:
-                print("Response", failed_session_response)
                 return failed_session_response
                     
         else:
-            print("Response", bad_request_response)
             return bad_request_response
         
     except ValidationError as err:
-        print(err.messages)
-        print(err.valid_data)
+        
+        logging.error("Error in req fields of module: {} (update_user_fun) is: {}".format(vars.applicationName,err.messages))
+        logging.error("Valid Data in req fields of module: {} (update_user_fun) is: {}".format(vars.applicationName,err.valid_data))
+        return bad_request_response
+    
+    except Exception as err:
+        logging.error("Err description of module: {} (update_user_fun) is: {}".format(vars.applicationName,err))
         return exception_response
 
 def logout_user_fun():
@@ -191,6 +188,7 @@ def logout_user_fun():
 
             session_status = check_session(user_details["sessionId"])
             if session_status: 
+                logging.info("In Session at module: {} (logout_user)".format(vars.applicationName))
                 time_now = datetime.datetime.now()
                 services.update("login_history",{"sessionId": user_details["sessionId"]},{"logoutTime": time_now.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),"sessionId": "null","sessionDuration": "null","inSession": False})
                 services.del_at_redis(user_details["sessionId"])
@@ -204,20 +202,23 @@ def logout_user_fun():
                 }
                 response["status"]["message"] = "User logout successful"
                 
-                print("Response", response)
+                logging.info("Success at module: {} (logout_user)".format(vars.applicationName))
                 return response 
             
             else:
-                print("Response", failed_session_response)
                 return failed_session_response
                     
         else:
-            print("Response", bad_request_response)
             return bad_request_response
             
     except ValidationError as err:
-        print(err.messages)
-        print(err.valid_data)
+        
+        logging.error("Error in req fields of module: {} (logout_user_fun) is: {}".format(vars.applicationName,err.messages))
+        logging.error("Valid Data in req fields of module: {} (logout_user_fun) is: {}".format(vars.applicationName,err.valid_data))
+        return bad_request_response
+    
+    except Exception as err:
+        logging.error("Err description of module: {} (logout_user_fun) is: {}".format(vars.applicationName,err))
         return exception_response  
     
 def forgetpassword_fun():
@@ -238,7 +239,7 @@ def forgetpassword_fun():
                     }
                 }
                 response["status"]["message"] = "Password changed successfully"
-                print("Response", response)
+                logging.info("Success at module: {} (Forget Password)".format(vars.applicationName))
                 return response  
             
             else:
@@ -250,16 +251,19 @@ def forgetpassword_fun():
                         "message": "Email not found"
                     }
                 }
-                print("Response", response)
                 return response  
             
         else:
-            print("Response", bad_request_response)
             return bad_request_response
         
     except ValidationError as err:
-        print(err.messages)
-        print(err.valid_data)
+        
+        logging.error("Error in req fields of module: {} (forgetpassword_fun) is: {}".format(vars.applicationName,err.messages))
+        logging.error("Valid Data in req fields of module: {} (forgetpassword_fun) is: {}".format(vars.applicationName,err.valid_data))
+        return bad_request_response
+    
+    except Exception as err:
+        logging.error("Err description of module: {} (forgetpassword_fun) is: {}".format(vars.applicationName,err))
         return exception_response
         
 def create_session(userId):
@@ -281,14 +285,15 @@ def create_session(userId):
         services.insert("login_history",login_record)
         services.update("users",{"userId": userId},{"lastLoginTime": time_now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")})
         
+        logging.info("Session created at module: {} (create_session)".format(vars.applicationName))
         return token
 
     except Exception as err:
-        print("Error at create_session",str(err))
-            
+        logging.error("Err description of module: {} (create_session) is: {}".format(vars.applicationName,err))            
+        
 def check_session(token):
     try:
         session_status = services.get_at_redis(token)
         return session_status
     except Exception as err:
-        print("Error at check_session",str(err))
+        logging.error("Err description of module: {} (check_session) is: {}".format(vars.applicationName,err))
