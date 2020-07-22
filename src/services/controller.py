@@ -35,7 +35,7 @@ def registration_fun():
             
         elif user_details["username"] and user_details["password"]:
                             
-            if not(user_details["notification"]):
+            if not("notifications" in user_details):
                 user_details["notification"] = "enabled"    
             
             time_now = datetime.datetime.now()

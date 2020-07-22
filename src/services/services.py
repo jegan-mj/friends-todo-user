@@ -46,7 +46,6 @@ def update(collection_name,filter,update_values):
         
 def set_at_redis(token):
     try:
-        print("Hi")
         redis_cli.setex(token,14400,"session_id")
         logging.info("Token Set at module: {} (Redis Set Token)".format(vars.applicationName))
         
