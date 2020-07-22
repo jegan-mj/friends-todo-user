@@ -24,13 +24,3 @@ failed_session_response = {
         "type": "session expired"
     }
 }
-
-success_response = {
-    "data": {
-    },
-    "status": {
-        "code": 200,
-        "state": "true",
-        "type": "success"
-    }
-}
